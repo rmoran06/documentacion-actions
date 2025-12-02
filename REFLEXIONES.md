@@ -1,42 +1,53 @@
-# 🤔 Reflexiones sobre GitHub Actions
+Reflexiones sobre GitHub Actions
+1. ¿Cómo se relacionan los jobs de GitHub Actions con los procesos en un sistema operativo?
 
-## 1. ¿Cómo se relacionan los jobs de GitHub Actions con los procesos en un sistema operativo?
+Cada job de GitHub Actions funciona de manera equivalente a un proceso dentro de un sistema operativo.
+Cuando se ejecutan varios jobs en un workflow, cada uno corre en una máquina virtual distinta, con su propio espacio de memoria, entorno y sistema de archivos.
+Esto permite que se ejecuten en paralelo sin interferirse entre sí.
 
-Básicamente, cada job funciona como un proceso independiente. Cuando lanzas varios jobs, es como si tuvieras varios procesos corriendo al mismo tiempo en diferentes máquinas. Cada uno tiene su propio espacio de trabajo, su propia memoria, y no se pisan entre ellos.
+En el workflow multi-os.yml, por ejemplo, cada combinación de sistema operativo y versión de Node.js se ejecuta como un proceso independiente, lo que refleja claramente esta analogía con los procesos de un SO.
 
-Si te fijas en `multi-os.yml`, cuando probamos en Ubuntu, Windows y macOS con diferentes versiones de Node, estamos creando montones de "procesos" diferentes que corren en paralelo, cada uno en su propia máquina virtual.
+2. ¿Qué pasa con el filesystem cuando termina un job?
 
-## 2. ¿Qué pasa con el filesystem cuando termina un job?
+Una vez que un job finaliza, su sistema de archivos se destruye por completo.
+Los runners de GitHub Actions proporcionan un entorno temporal que desaparece al finalizar la ejecución, de manera similar a cómo un proceso puede liberar sus recursos al terminar.
 
-Todo se borra. En serio, todo. GitHub te da una máquina virtual limpia para cada job, y cuando termina, puf, desaparece. Es como si nunca hubiera existido.
+Por esta razón, si se desea conservar archivos generados durante el job —como el build.log del Ejercicio 5— es necesario subirlos explícitamente como artifacts. De lo contrario, se pierden al apagarse la máquina virtual del runner.
 
-Por eso en el ejercicio de artifacts tuvimos que guardar explícitamente el archivo `build.log` - si no lo subimos como artifact, se pierde para siempre cuando el runner se apaga.
+3. ¿Por qué es importante testear en múltiples sistemas operativos?
 
-## 3. ¿Por qué es importante testear en múltiples sistemas operativos?
+Las aplicaciones pueden comportarse de manera diferente según el sistema operativo.
+Diferencias como rutas (/ vs \), comandos disponibles o variaciones en el shell pueden causar fallos inesperados.
 
-Porque las cosas no funcionan igual en todos lados. Lo que corre perfecto en tu Mac puede explotar en Windows por algo tan simple como las barras de las rutas (`/` vs `\`). O un comando que existe en Linux tal vez no está en Windows.
+El workflow multi-os.yml permite validar el código en Ubuntu, Windows y macOS, asegurando que la aplicación funcione correctamente en distintos entornos.
+Esto evita bugs que pueden surgir cuando un usuario ejecuta la aplicación en un SO distinto al del desarrollador.
 
-Con `multi-os.yml` nos aseguramos de que la app funcione bien sin importar dónde la ejecuten. Es mejor descubrir los problemas ahora que cuando un usuario te reporte bugs raros.
+4. ¿Cómo maneja GitHub Actions la concurrencia de workflows?
 
-## 4. ¿Cómo maneja GitHub Actions la concurrencia de workflows?
+GitHub Actions ejecuta cada workflow en una máquina virtual independiente.
+Si se realizan varios push seguidos, GitHub puede correr múltiples workflows al mismo tiempo, sin que sus ejecuciones se afecten unas a otras.
 
-GitHub te da máquinas virtuales aisladas para cada workflow. Si haces push tres veces seguidas, GitHub puede correr esos tres workflows al mismo tiempo, cada uno en su propia VM. No se interfieren entre sí.
+Sin embargo, cuando un workflow define dependencias mediante needs:, GitHub respeta el orden establecido.
+Esto se asemeja al manejo de procesos y sincronización en un sistema operativo, donde algunos procesos deben esperar a otros antes de continuar.
 
-Eso sí, si defines dependencias entre jobs con `needs:`, GitHub respeta ese orden y espera a que terminen los jobs necesarios antes de empezar el siguiente.
+5. ¿Qué recursos del sistema usa un runner?
 
-## 5. ¿Qué recursos del sistema usa un runner?
+Un runner utiliza recursos computacionales como CPU, memoria RAM, almacenamiento temporal y red, tal como lo haría cualquier sistema operativo ejecutando procesos.
 
-Un runner es básicamente una computadora virtual que usa CPU, memoria RAM, disco y red. GitHub te asigna estos recursos automáticamente según el plan que tengas.
+En nuestro caso, el workflow multi-os.yml solicita 9 máquinas virtuales simultáneamente (3 sistemas operativos × 3 versiones de Node.js).
+Cada runner consume recursos propios mientras instala dependencias, ejecuta tests y realiza las tareas definidas en el workflow.
 
-Cuando corremos `multi-os.yml` con 9 combinaciones, estamos pidiendo 9 máquinas virtuales al mismo tiempo. Cada una consume sus propios recursos mientras ejecuta los tests.
+6. ¿Cómo se comunican los procesos en un pipeline de CI/CD?
 
-## 6. ¿Cómo se comunican los procesos en un pipeline de CI/CD?
+Dado que cada job se ejecuta en una máquina independiente, no comparten directamente el sistema de archivos.
+Para permitir comunicación y transferencia de información entre ellos, GitHub Actions ofrece varios mecanismos:
 
-Los jobs no comparten archivos directamente porque cada uno vive en su propia máquina. Para pasarse información entre ellos, tenemos que usar:
+Artifacts: para compartir archivos generados (como build.log).
 
-- **Artifacts**: para compartir archivos (como hicimos con `build.log`)
-- **Cache**: para reutilizar dependencias y ahorrar tiempo
-- **Outputs**: para pasar datos pequeños entre steps
-- **Logs**: que todos pueden ver después
+Cache: para reutilizar dependencias entre ejecuciones.
 
-Es como si cada job estuviera en una oficina diferente - necesitas métodos específicos para comunicarte entre oficinas.
+Outputs entre steps: para enviar datos de un step a otro dentro del mismo job.
+
+Logs: permiten observar la salida generada por cada proceso.
+
+En conjunto, estos mecanismos facilitan la colaboración entre jobs, similar a cómo los procesos se comunican mediante IPC (Inter-Process Communication) en un sistema operativo.
