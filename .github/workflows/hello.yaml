@@ -17,3 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: echo "¡Hola Mundo!"
+      
+      - name: Simular deploy (solo en main)
+        if: github.ref == 'refs/heads/main'
+        run: echo "🚀 Realizando deploy automático desde la rama main..."
