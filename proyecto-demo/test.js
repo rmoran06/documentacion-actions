@@ -1,4 +1,4 @@
-const { suma, resta, multiplicacion, division } = require('./index.js');
+const { suma, resta, multiplicacion, division, esPar } = require('./index.js');
 
 function test() {
     let passed = 0;
@@ -106,6 +106,41 @@ function test() {
             failed++;
             tests.push({ name: "División por cero", status: "❌" });
         }
+    }
+
+    // Tests for esPar: should return true for even numbers and false for odd numbers
+    // Test 7: esPar returns true for even numbers
+    try {
+        if (esPar(4) === true && esPar(0) === true && esPar(-2) === true) {
+            console.log("✅ Test 7 pasó: esPar devuelve true para números pares");
+            passed++;
+            tests.push({ name: "esPar con números pares", status: "✅" });
+        } else {
+            console.log("❌ Test 7 falló: esPar debería devolver true para números pares");
+            failed++;
+            tests.push({ name: "esPar con números pares", status: "❌" });
+        }
+    } catch (e) {
+        console.log("❌ Test 7 error:", e.message);
+        failed++;
+        tests.push({ name: "esPar con números pares", status: "❌" });
+    }
+
+    // Test 8: esPar returns false for odd numbers
+    try {
+        if (esPar(3) === false && esPar(1) === false && esPar(-1) === false) {
+            console.log("✅ Test 8 pasó: esPar devuelve false para números impares");
+            passed++;
+            tests.push({ name: "esPar con números impares", status: "✅" });
+        } else {
+            console.log("❌ Test 8 falló: esPar debería devolver false para números impares");
+            failed++;
+            tests.push({ name: "esPar con números impares", status: "❌" });
+        }
+    } catch (e) {
+        console.log("❌ Test 8 error:", e.message);
+        failed++;
+        tests.push({ name: "esPar con números impares", status: "❌" });
     }
 
     console.log("\n" + "=".repeat(50));
